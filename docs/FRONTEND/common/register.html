@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - AgriMarket</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="../assets/css/style.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6">
+        <div class="text-center mb-4">
+          <a href="../index.html" class="text-decoration-none">
+            <h1 class="text-primary"><i class="bi bi-leaf text-accent"></i> AgriMarket</h1>
+          </a>
+          <p class="text-muted">Create your account</p>
+        </div>
+        
+        <div id="alertContainer"></div>
+        
+        <div class="card shadow-sm">
+          <div class="card-body p-4">
+            <form id="registerForm" novalidate>
+              <!-- Account Type -->
+              <div class="mb-4">
+                <label class="form-label fw-semibold">I want to register as:</label>
+                <div class="row g-3">
+                  <div class="col-6">
+                    <input type="radio" class="btn-check" name="role" id="roleBuyer" value="buyer" checked>
+                    <label class="btn btn-outline-primary w-100 py-3" for="roleBuyer">
+                      <i class="bi bi-cart3 d-block fs-3 mb-2"></i>Buyer
+                    </label>
+                  </div>
+                  <div class="col-6">
+                    <input type="radio" class="btn-check" name="role" id="roleFarmer" value="farmer">
+                    <label class="btn btn-outline-primary w-100 py-3" for="roleFarmer">
+                      <i class="bi bi-flower1 d-block fs-3 mb-2"></i>Farmer
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="firstName" class="form-label">First Name</label>
+                  <input type="text" class="form-control" id="firstName" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="lastName" class="form-label">Last Name</label>
+                  <input type="text" class="form-control" id="lastName" required>
+                </div>
+              </div>
+              
+              <div class="mb-3 mt-3">
+                <label for="email" class="form-label">Email Address</label>
+                <input type="email" class="form-control" id="email" required>
+              </div>
+              
+              <div class="mb-3">
+                <label for="phone" class="form-label">Phone Number</label>
+                <input type="tel" class="form-control" id="phone" placeholder="10-digit mobile number" required>
+              </div>
+              
+              <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <div class="input-group">
+                  <input type="password" class="form-control" id="password" required>
+                  <button class="btn btn-outline-secondary toggle-password" type="button">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                </div>
+                <div class="progress mt-2" style="height: 4px;">
+                  <div class="progress-bar" id="passwordStrength" style="width: 0%"></div>
+                </div>
+                <small class="text-muted" id="passwordStrengthText"></small>
+              </div>
+              
+              <div class="mb-4">
+                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                <input type="password" class="form-control" id="confirmPassword" required>
+              </div>
+              
+              <div class="form-check mb-4">
+                <input type="checkbox" class="form-check-input" id="agreeTerms" required>
+                <label class="form-check-label" for="agreeTerms">
+                  I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
+                </label>
+              </div>
+              
+              <button type="submit" class="btn btn-primary w-100 py-2">
+                <i class="bi bi-person-plus me-2"></i>Create Account
+              </button>
+            </form>
+            
+            <hr class="my-4">
+            <p class="text-center mb-0">
+              Already have an account? <a href="login.html" class="text-primary fw-semibold">Sign In</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/js/utils.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/auth.js"></script>
+</body>
+</html>
