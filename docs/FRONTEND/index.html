@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriMarket - Fresh Farm Products</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="assets/css/style.css" rel="stylesheet">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+      <a class="navbar-brand" href="#"><i class="bi bi-leaf"></i> AgriMarket</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link active" href="#">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="buyer/products.html">Products</a></li>
+          <li class="nav-item"><a class="nav-link" href="#">About</a></li>
+          <li class="nav-item"><a class="nav-link" href="#">Contact</a></li>
+        </ul>
+        <div class="d-flex gap-2 auth-logged-out">
+          <a href="common/login.html" class="btn btn-outline-primary">Login</a>
+          <a href="common/register.html" class="btn btn-primary">Register</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero-section text-center">
+    <div class="container">
+      <h1 class="hero-title">Fresh From Farm to Your Table</h1>
+      <p class="hero-subtitle">Connect directly with local farmers for fresh, organic produce</p>
+      <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+          <div class="search-bar d-flex">
+            <input type="text" class="form-control" placeholder="Search for vegetables, fruits, grains...">
+            <button class="btn btn-primary"><i class="bi bi-search me-2"></i>Search</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Categories -->
+  <section class="py-5">
+    <div class="container">
+      <h2 class="text-center mb-4">Browse Categories</h2>
+      <div class="row g-4">
+        <div class="col-6 col-md-4 col-lg-2"><div class="category-card"><div class="icon"><i class="bi bi-flower1"></i></div><h6>Vegetables</h6></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="category-card"><div class="icon"><i class="bi bi-apple"></i></div><h6>Fruits</h6></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="category-card"><div class="icon"><i class="bi bi-droplet"></i></div><h6>Dairy</h6></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="category-card"><div class="icon"><i class="bi bi-egg"></i></div><h6>Grains</h6></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="category-card"><div class="icon"><i class="bi bi-cup-hot"></i></div><h6>Spices</h6></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="category-card"><div class="icon"><i class="bi bi-tree"></i></div><h6>Organic</h6></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Products -->
+  <section class="py-5 bg-white">
+    <div class="container">
+      <h2 class="text-center mb-4">Featured Products</h2>
+      <div class="row g-4">
+        <div class="col-6 col-md-4 col-lg-3">
+          <div class="card product-card">
+            <span class="badge bg-success product-badge">Organic</span>
+            <button class="wishlist-btn"><i class="bi bi-heart"></i></button>
+            <img src="https://via.placeholder.com/300x200/4CAF50/FFFFFF?text=Tomatoes" class="product-image" alt="Tomatoes">
+            <div class="card-body">
+              <h6 class="card-title">Fresh Tomatoes</h6>
+              <small class="text-muted">Green Farm</small>
+              <div class="product-price mt-2">₹45/kg</div>
+              <button class="btn btn-primary btn-sm w-100 mt-2"><i class="bi bi-cart-plus me-1"></i>Add to Cart</button>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-3">
+          <div class="card product-card">
+            <img src="https://via.placeholder.com/300x200/FF9800/FFFFFF?text=Potatoes" class="product-image" alt="Potatoes">
+            <button class="wishlist-btn"><i class="bi bi-heart"></i></button>
+            <div class="card-body">
+              <h6 class="card-title">Fresh Potatoes</h6>
+              <small class="text-muted">Valley Fresh</small>
+              <div class="product-price mt-2">₹30/kg</div>
+              <button class="btn btn-primary btn-sm w-100 mt-2"><i class="bi bi-cart-plus me-1"></i>Add to Cart</button>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-3">
+          <div class="card product-card">
+            <span class="badge bg-warning product-badge">Sale</span>
+            <button class="wishlist-btn"><i class="bi bi-heart"></i></button>
+            <img src="https://via.placeholder.com/300x200/8BC34A/FFFFFF?text=Spinach" class="product-image" alt="Spinach">
+            <div class="card-body">
+              <h6 class="card-title">Organic Spinach</h6>
+              <small class="text-muted">Organic Valley</small>
+              <div class="product-price mt-2">₹25/bunch <span class="original-price">₹35</span></div>
+              <button class="btn btn-primary btn-sm w-100 mt-2"><i class="bi bi-cart-plus me-1"></i>Add to Cart</button>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-3">
+          <div class="card product-card">
+            <button class="wishlist-btn"><i class="bi bi-heart"></i></button>
+            <img src="https://via.placeholder.com/300x200/FFC107/FFFFFF?text=Mangoes" class="product-image" alt="Mangoes">
+            <div class="card-body">
+              <h6 class="card-title">Alphonso Mangoes</h6>
+              <small class="text-muted">Konkan Farms</small>
+              <div class="product-price mt-2">₹350/dozen</div>
+              <button class="btn btn-primary btn-sm w-100 mt-2"><i class="bi bi-cart-plus me-1"></i>Add to Cart</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="text-center mt-4">
+        <a href="buyer/products.html" class="btn btn-outline-primary">View All Products</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-lg-4">
+          <h5><i class="bi bi-leaf me-2"></i>AgriMarket</h5>
+          <p class="text-muted">Connecting farmers directly with consumers for fresh, quality produce.</p>
+        </div>
+        <div class="col-6 col-lg-2">
+          <h6>Quick Links</h6>
+          <ul class="list-unstyled"><li><a href="#">Home</a></li><li><a href="#">Products</a></li><li><a href="#">About</a></li></ul>
+        </div>
+        <div class="col-6 col-lg-2">
+          <h6>For Farmers</h6>
+          <ul class="list-unstyled"><li><a href="#">Sell with us</a></li><li><a href="#">Farmer Portal</a></li></ul>
+        </div>
+        <div class="col-lg-4">
+          <h6>Contact</h6>
+          <p class="text-muted mb-1"><i class="bi bi-envelope me-2"></i>support@agrimarket.com</p>
+          <p class="text-muted"><i class="bi bi-phone me-2"></i>+91 1234567890</p>
+        </div>
+      </div>
+      <div class="footer-bottom text-center text-muted">
+        <small>&copy; 2024 AgriMarket. All rights reserved.</small>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/cart.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
