@@ -11,6 +11,8 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ProfileSettings from "./pages/profile/ProfileSettings";
 import FarmerDashboard from "./pages/farmer/FarmerDashboard";
 import BuyerDashboard from "./pages/buyer/BuyerDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -49,6 +51,20 @@ const AppRoutes = () => {
       <Route
         path="/register"
         element={isAuthenticated ? <Navigate to={`/${user?.role}`} replace /> : <Register />}
+      />
+      <Route
+        path="/forgot-password"
+        element={isAuthenticated ? <Navigate to={`/${user?.role}`} replace /> : <ForgotPassword />}
+      />
+
+      {/* Profile Settings - accessible by all authenticated users */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfileSettings />
+          </ProtectedRoute>
+        }
       />
 
       {/* Farmer Routes */}
