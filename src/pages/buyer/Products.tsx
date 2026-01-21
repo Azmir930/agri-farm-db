@@ -10,10 +10,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Loader2 } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
-import { mockProducts, categories } from '@/data/mockProducts';
+import { useProducts, useCategories } from '@/hooks/useProducts';
+import { useWishlist } from '@/hooks/useWishlist';
 
 const Products = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,14 +26,36 @@ const Products = () => {
   
   const { addItem } = useCart();
   const { toast } = useToast();
+  const { data: dbProducts = [], isLoading: productsLoading } = useProducts();
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const { addToWishlist, isAdding } = useWishlist();
+
+  const allCategories = ['All', ...categories.map(c => c.name)];
+
+  // Transform database products to ProductCard format
+  const products: Product[] = useMemo(() => 
+    dbProducts.map(p => ({
+      id: p.id,
+      name: p.name,
+      description: p.description || '',
+      price: Number(p.price),
+      unit: p.unit,
+      category: p.categories?.name || 'Other',
+      stock: p.stock,
+      rating: 0,
+      reviewCount: 0,
+      farmerId: p.farmer_id,
+      farmerName: p.farmer_name || 'Unknown Farmer',
+      image: p.image_url || undefined,
+    })), [dbProducts]);
 
   const farmers = useMemo(() => {
-    const farmerSet = new Set(mockProducts.map((p) => p.farmerName));
+    const farmerSet = new Set(products.map((p) => p.farmerName));
     return Array.from(farmerSet);
-  }, []);
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
-    let result = [...mockProducts];
+    let result = [...products];
 
     // Search filter
     if (searchQuery) {
@@ -82,7 +105,7 @@ const Products = () => {
     }
 
     return result;
-  }, [searchQuery, selectedCategory, priceRange, sortBy, inStockOnly, selectedFarmers]);
+  }, [products, searchQuery, selectedCategory, priceRange, sortBy, inStockOnly, selectedFarmers]);
 
   const handleAddToCart = (product: Product) => {
     addItem({
@@ -101,11 +124,20 @@ const Products = () => {
     });
   };
 
-  const handleAddToWishlist = (product: Product) => {
-    toast({
-      title: 'Added to wishlist',
-      description: `${product.name} has been added to your wishlist.`,
-    });
+  const handleAddToWishlist = async (product: Product) => {
+    try {
+      await addToWishlist(product.id);
+      toast({
+        title: 'Added to wishlist',
+        description: `${product.name} has been added to your wishlist.`,
+      });
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to add to wishlist. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const clearFilters = () => {
@@ -176,6 +208,8 @@ const Products = () => {
     </div>
   );
 
+  const isLoading = productsLoading || categoriesLoading;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -240,19 +274,21 @@ const Products = () => {
         </div>
 
         {/* Category Tabs */}
-        <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-          <TabsList className="flex-wrap h-auto gap-2 bg-transparent p-0">
-            {categories.map((cat) => (
-              <TabsTrigger
-                key={cat}
-                value={cat}
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full px-4"
-              >
-                {cat}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        {!categoriesLoading && (
+          <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
+            <TabsList className="flex-wrap h-auto gap-2 bg-transparent p-0">
+              {allCategories.map((cat) => (
+                <TabsTrigger
+                  key={cat}
+                  value={cat}
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full px-4"
+                >
+                  {cat}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        )}
 
         {/* Main Content */}
         <div className="grid gap-6 lg:grid-cols-4">
@@ -268,7 +304,11 @@ const Products = () => {
 
           {/* Products Grid */}
           <div className="lg:col-span-3">
-            {filteredProducts.length > 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : filteredProducts.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredProducts.map((product) => (
                   <ProductCard
