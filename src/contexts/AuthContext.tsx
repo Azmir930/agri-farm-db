@@ -3,8 +3,6 @@ import { useAuth as useAuthHook } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
-
-// Legacy support - map old UserRole type to new AppRole
 export type UserRole = AppRole;
 
 export interface User {
@@ -17,7 +15,8 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role?: UserRole) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, role: UserRole) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -29,21 +28,23 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const auth = useAuthHook();
 
-  // Transform the Supabase user to our legacy User format
   const user: User | null = auth.user
     ? {
         id: auth.user.id,
-        name: auth.user.profile
-          ? `${auth.user.profile.first_name || ''} ${auth.user.profile.last_name || ''}`.trim() || auth.user.email || ''
-          : auth.user.email || '',
+        name: auth.user.email || '',
         email: auth.user.email || '',
         role: auth.role || 'buyer',
-        avatar: auth.user.profile?.avatar_url || undefined,
+        avatar: undefined,
       }
     : null;
 
-  const login = async (email: string, password: string, _role?: UserRole) => {
+  const login = async (email: string, password: string) => {
     const { error } = await auth.signIn(email, password);
+    if (error) throw error;
+  };
+
+  const signup = async (email: string, password: string, role: UserRole) => {
+    const { error } = await auth.signUp(email, password, { role });
     if (error) throw error;
   };
 
@@ -56,6 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         login,
+        signup,
         logout,
         isAuthenticated: auth.isAuthenticated,
         isLoading: auth.loading,
@@ -69,8 +71,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
