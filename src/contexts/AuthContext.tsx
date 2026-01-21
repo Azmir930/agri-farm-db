@@ -1,11 +1,6 @@
-import React, { createContext, useContext, ReactNode } from 'react';
-import { useAuth as useAuthHook } from '@/hooks/useAuth';
-import type { Database } from '@/integrations/supabase/types';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-type AppRole = Database['public']['Enums']['app_role'];
-
-// Legacy support - map old UserRole type to new AppRole
-export type UserRole = AppRole;
+export type UserRole = 'farmer' | 'buyer' | 'admin';
 
 export interface User {
   id: string;
@@ -17,51 +12,40 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role?: UserRole) => Promise<void>;
+  login: (email: string, password: string, role: UserRole) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
-  isLoading: boolean;
-  role: UserRole | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Mock users for demo
+const mockUsers: Record<string, User> = {
+  'farmer@demo.com': { id: '1', name: 'John Farmer', email: 'farmer@demo.com', role: 'farmer' },
+  'buyer@demo.com': { id: '2', name: 'Sarah Buyer', email: 'buyer@demo.com', role: 'buyer' },
+  'admin@demo.com': { id: '3', name: 'Admin User', email: 'admin@demo.com', role: 'admin' },
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const auth = useAuthHook();
+  const [user, setUser] = useState<User | null>(null);
 
-  // Transform the Supabase user to our legacy User format
-  const user: User | null = auth.user
-    ? {
-        id: auth.user.id,
-        name: auth.user.profile
-          ? `${auth.user.profile.first_name || ''} ${auth.user.profile.last_name || ''}`.trim() || auth.user.email || ''
-          : auth.user.email || '',
-        email: auth.user.email || '',
-        role: auth.role || 'buyer',
-        avatar: auth.user.profile?.avatar_url || undefined,
-      }
-    : null;
-
-  const login = async (email: string, password: string, _role?: UserRole) => {
-    const { error } = await auth.signIn(email, password);
-    if (error) throw error;
+  const login = async (email: string, password: string, role: UserRole) => {
+    // Mock login - in production, this would call your PHP backend
+    const mockUser = mockUsers[email] || {
+      id: Date.now().toString(),
+      name: email.split('@')[0],
+      email,
+      role,
+    };
+    setUser(mockUser);
   };
 
-  const logout = async () => {
-    await auth.signOut();
+  const logout = () => {
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        logout,
-        isAuthenticated: auth.isAuthenticated,
-        isLoading: auth.loading,
-        role: auth.role,
-      }}
-    >
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

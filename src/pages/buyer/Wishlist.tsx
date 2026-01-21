@@ -1,84 +1,69 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Heart, ShoppingCart, Trash2, Loader2 } from 'lucide-react';
+import { Heart, ShoppingCart, Trash2, Star } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
-import { useWishlist } from '@/hooks/useWishlist';
+import { mockProducts } from '@/data/mockProducts';
+
+// Mock wishlist items (subset of products)
+const initialWishlist = mockProducts.slice(0, 5).map((p) => ({
+  ...p,
+  addedAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+}));
 
 const Wishlist = () => {
+  const [wishlistItems, setWishlistItems] = useState(initialWishlist);
   const { addItem } = useCart();
   const { toast } = useToast();
-  const { items: wishlistItems, isLoading, removeFromWishlist, isRemoving } = useWishlist();
 
-  const handleRemoveFromWishlist = async (productId: string) => {
-    try {
-      await removeFromWishlist(productId);
-      toast({
-        title: 'Removed from wishlist',
-        description: 'Item has been removed from your wishlist.',
-      });
-    } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to remove from wishlist.',
-        variant: 'destructive',
-      });
-    }
+  const handleRemoveFromWishlist = (productId: string) => {
+    setWishlistItems((prev) => prev.filter((item) => item.id !== productId));
+    toast({
+      title: 'Removed from wishlist',
+      description: 'Item has been removed from your wishlist.',
+    });
   };
 
-  const handleAddToCart = (item: typeof wishlistItems[0]) => {
-    if (!item.product) return;
-    
+  const handleAddToCart = (product: (typeof initialWishlist)[0]) => {
     addItem({
-      productId: item.product.id,
-      name: item.product.name,
-      price: Number(item.product.price),
+      productId: product.id,
+      name: product.name,
+      price: product.price,
       quantity: 1,
-      unit: item.product.unit,
-      image: item.product.image_url || undefined,
-      farmerId: item.product.farmer_id,
-      farmerName: 'Farmer',
+      unit: product.unit,
+      image: product.image,
+      farmerId: product.farmerId,
+      farmerName: product.farmerName,
     });
     toast({
       title: 'Added to cart',
-      description: `${item.product.name} has been added to your cart.`,
+      description: `${product.name} has been added to your cart.`,
     });
   };
 
   const handleMoveAllToCart = () => {
-    wishlistItems.forEach((item) => {
-      if (item.product) {
-        addItem({
-          productId: item.product.id,
-          name: item.product.name,
-          price: Number(item.product.price),
-          quantity: 1,
-          unit: item.product.unit,
-          image: item.product.image_url || undefined,
-          farmerId: item.product.farmer_id,
-          farmerName: 'Farmer',
-        });
-      }
+    wishlistItems.forEach((product) => {
+      addItem({
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: 1,
+        unit: product.unit,
+        image: product.image,
+        farmerId: product.farmerId,
+        farmerName: product.farmerName,
+      });
     });
+    setWishlistItems([]);
     toast({
       title: 'All items added to cart',
       description: 'Your wishlist items have been moved to cart.',
     });
   };
-
-  if (isLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex justify-center items-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>
@@ -117,85 +102,92 @@ const Wishlist = () => {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {wishlistItems.map((item) => {
-              const product = item.product;
-              if (!product) return null;
-              
-              return (
-                <Card key={item.id} className="overflow-hidden">
-                  <CardContent className="p-0">
-                    <div className="flex flex-col sm:flex-row">
-                      {/* Product Image */}
-                      <Link
-                        to={`/buyer/products/${product.id}`}
-                        className="sm:w-48 aspect-video sm:aspect-square bg-muted flex-shrink-0"
-                      >
-                        <img
-                          src={product.image_url || '/placeholder.svg'}
-                          alt={product.name}
-                          className="h-full w-full object-cover"
-                        />
-                      </Link>
+            {wishlistItems.map((item) => (
+              <Card key={item.id} className="overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="flex flex-col sm:flex-row">
+                    {/* Product Image */}
+                    <Link
+                      to={`/buyer/products/${item.id}`}
+                      className="sm:w-48 aspect-video sm:aspect-square bg-muted flex-shrink-0"
+                    >
+                      <img
+                        src={item.image || '/placeholder.svg'}
+                        alt={item.name}
+                        className="h-full w-full object-cover"
+                      />
+                    </Link>
 
-                      {/* Product Details */}
-                      <div className="flex-1 p-4 flex flex-col">
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <Link
-                                to={`/buyer/products/${product.id}`}
-                                className="hover:text-primary"
-                              >
-                                <h3 className="font-semibold text-lg">{product.name}</h3>
-                              </Link>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xl font-bold text-primary">
-                                ₹{Number(product.price)}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                per {product.unit}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-4 mt-3">
-                            <Badge variant={product.stock > 10 ? 'default' : 'destructive'}>
-                              {product.stock > 10 ? 'In Stock' : `Only ${product.stock} left`}
+                    {/* Product Details */}
+                    <div className="flex-1 p-4 flex flex-col">
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <Badge variant="secondary" className="mb-2">
+                              {item.category}
                             </Badge>
+                            <Link
+                              to={`/buyer/products/${item.id}`}
+                              className="hover:text-primary"
+                            >
+                              <h3 className="font-semibold text-lg">{item.name}</h3>
+                            </Link>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              by {item.farmerName}
+                            </p>
                           </div>
-
-                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                            {product.description}
-                          </p>
+                          <div className="text-right">
+                            <p className="text-xl font-bold text-primary">
+                              ₹{item.price}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              per {item.unit}
+                            </p>
+                          </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center gap-3 mt-4 pt-4 border-t">
-                          <Button
-                            className="flex-1 sm:flex-none gap-2"
-                            onClick={() => handleAddToCart(item)}
-                            disabled={product.stock === 0}
-                          >
-                            <ShoppingCart className="h-4 w-4" />
-                            Add to Cart
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleRemoveFromWishlist(product.id)}
-                            disabled={isRemoving}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <div className="flex items-center gap-4 mt-3">
+                          <div className="flex items-center gap-1">
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            <span className="text-sm font-medium">{item.rating}</span>
+                            <span className="text-sm text-muted-foreground">
+                              ({item.reviewCount})
+                            </span>
+                          </div>
+                          <Badge variant={item.stock > 10 ? 'default' : 'destructive'}>
+                            {item.stock > 10 ? 'In Stock' : `Only ${item.stock} left`}
+                          </Badge>
                         </div>
+
+                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                          {item.description}
+                        </p>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-3 mt-4 pt-4 border-t">
+                        <Button
+                          className="flex-1 sm:flex-none gap-2"
+                          onClick={() => handleAddToCart(item)}
+                          disabled={item.stock === 0}
+                        >
+                          <ShoppingCart className="h-4 w-4" />
+                          Add to Cart
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleRemoveFromWishlist(item.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
       </div>

@@ -4,19 +4,46 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import {
   MapPin,
   CreditCard,
   Truck,
   ShieldCheck,
   ChevronLeft,
+  Plus,
+  Check,
 } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
-import { useCreateOrder } from '@/hooks/useOrders';
+
+const savedAddresses = [
+  {
+    id: '1',
+    type: 'Home',
+    name: 'Rajesh Kumar',
+    line1: '123 Farm Lane, Green Valley',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    pincode: '400001',
+    phone: '+91 98765 43210',
+    isDefault: true,
+  },
+  {
+    id: '2',
+    type: 'Office',
+    name: 'Rajesh Kumar',
+    line1: '456 Business Park, Tower B',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    pincode: '400051',
+    phone: '+91 98765 43210',
+    isDefault: false,
+  },
+];
 
 const paymentMethods = [
   { id: 'upi', name: 'UPI', description: 'Pay using UPI apps' },
@@ -29,19 +56,12 @@ const Checkout = () => {
   const navigate = useNavigate();
   const { items, total, clearCart } = useCart();
   const { toast } = useToast();
-  const createOrder = useCreateOrder();
   
+  const [selectedAddress, setSelectedAddress] = useState(savedAddresses[0].id);
   const [selectedPayment, setSelectedPayment] = useState('upi');
   const [isProcessing, setIsProcessing] = useState(false);
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
-  
-  // Address form state
-  const [address, setAddress] = useState({
-    line1: '',
-    city: '',
-    state: '',
-  });
 
   const deliveryFee = total >= 500 ? 0 : 40;
   const discount = promoApplied ? Math.round(total * 0.1) : 0;
@@ -77,41 +97,19 @@ const Checkout = () => {
   };
 
   const handlePlaceOrder = async () => {
-    if (!address.line1 || !address.city || !address.state) {
-      toast({
-        title: 'Address required',
-        description: 'Please fill in your delivery address.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     setIsProcessing(true);
     
     try {
-      const orderItems = items.map(item => ({
-        productId: item.productId,
-        productName: item.name,
-        farmerId: item.farmerId,
-        quantity: item.quantity,
-        unitPrice: item.price,
-      }));
-
-      await createOrder.mutateAsync({
-        items: orderItems,
-        deliveryAddress: address.line1,
-        deliveryCity: address.city,
-        deliveryState: address.state,
-        deliveryFee,
-        paymentMethod: selectedPayment,
-        notes: promoApplied ? 'Promo: FRESH10 applied' : undefined,
-      });
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
       
       clearCart();
       
       toast({
         title: 'Order placed successfully!',
-        description: 'Your order has been confirmed.',
+        description: `Your order ${orderNumber} has been confirmed.`,
       });
       
       navigate('/buyer/orders');
@@ -151,36 +149,45 @@ const Checkout = () => {
                   <CardTitle>Delivery Address</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="address">Street Address</Label>
-                  <Input
-                    id="address"
-                    placeholder="Enter your street address"
-                    value={address.line1}
-                    onChange={(e) => setAddress({ ...address, line1: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                      id="city"
-                      placeholder="City"
-                      value={address.city}
-                      onChange={(e) => setAddress({ ...address, city: e.target.value })}
-                    />
+              <CardContent>
+                <RadioGroup value={selectedAddress} onValueChange={setSelectedAddress}>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {savedAddresses.map((address) => (
+                      <Label
+                        key={address.id}
+                        htmlFor={address.id}
+                        className={`flex cursor-pointer flex-col rounded-lg border-2 p-4 transition-all ${
+                          selectedAddress === address.id
+                            ? 'border-primary bg-primary/5'
+                            : 'border-muted hover:border-primary/50'
+                        }`}
+                      >
+                        <RadioGroupItem value={address.id} id={address.id} className="sr-only" />
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{address.type}</span>
+                            {address.isDefault && (
+                              <Badge variant="secondary" className="text-xs">Default</Badge>
+                            )}
+                          </div>
+                          {selectedAddress === address.id && (
+                            <Check className="h-5 w-5 text-primary" />
+                          )}
+                        </div>
+                        <p className="text-sm font-medium">{address.name}</p>
+                        <p className="text-sm text-muted-foreground">{address.line1}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {address.city}, {address.state} - {address.pincode}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">{address.phone}</p>
+                      </Label>
+                    ))}
                   </div>
-                  <div>
-                    <Label htmlFor="state">State</Label>
-                    <Input
-                      id="state"
-                      placeholder="State"
-                      value={address.state}
-                      onChange={(e) => setAddress({ ...address, state: e.target.value })}
-                    />
-                  </div>
-                </div>
+                </RadioGroup>
+                <Button variant="outline" className="mt-4 gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add New Address
+                </Button>
               </CardContent>
             </Card>
 
