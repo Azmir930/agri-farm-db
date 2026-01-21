@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -16,81 +16,11 @@ import {
   ChevronRight,
   MapPin,
   Star,
+  Loader2,
 } from 'lucide-react';
+import { useOrders } from '@/hooks/useOrders';
 
 type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-
-interface OrderItem {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  price: number;
-  image?: string;
-}
-
-interface Order {
-  id: string;
-  orderNumber: string;
-  date: string;
-  status: OrderStatus;
-  items: OrderItem[];
-  total: number;
-  deliveryAddress: string;
-  estimatedDelivery?: string;
-  trackingId?: string;
-}
-
-const mockOrders: Order[] = [
-  {
-    id: '1',
-    orderNumber: 'ORD-045678',
-    date: '2024-01-15',
-    status: 'shipped',
-    items: [
-      { id: '1', name: 'Organic Tomatoes', quantity: 5, unit: 'kg', price: 60 },
-      { id: '2', name: 'Fresh Spinach', quantity: 2, unit: 'bunch', price: 40 },
-    ],
-    total: 380,
-    deliveryAddress: '123 Farm Lane, Green Valley, Mumbai',
-    estimatedDelivery: '2024-01-18',
-    trackingId: 'TRK123456',
-  },
-  {
-    id: '2',
-    orderNumber: 'ORD-045632',
-    date: '2024-01-12',
-    status: 'delivered',
-    items: [
-      { id: '3', name: 'Basmati Rice', quantity: 10, unit: 'kg', price: 120 },
-    ],
-    total: 1200,
-    deliveryAddress: '123 Farm Lane, Green Valley, Mumbai',
-  },
-  {
-    id: '3',
-    orderNumber: 'ORD-045598',
-    date: '2024-01-10',
-    status: 'pending',
-    items: [
-      { id: '4', name: 'Fresh Mangoes', quantity: 2, unit: 'dozen', price: 150 },
-      { id: '5', name: 'Green Apples', quantity: 3, unit: 'kg', price: 180 },
-    ],
-    total: 840,
-    deliveryAddress: '123 Farm Lane, Green Valley, Mumbai',
-  },
-  {
-    id: '4',
-    orderNumber: 'ORD-045501',
-    date: '2024-01-05',
-    status: 'cancelled',
-    items: [
-      { id: '6', name: 'Fresh Milk', quantity: 5, unit: 'litre', price: 55 },
-    ],
-    total: 275,
-    deliveryAddress: '123 Farm Lane, Green Valley, Mumbai',
-  },
-];
 
 const statusConfig: Record<OrderStatus, { label: string; icon: React.ElementType; color: string }> = {
   pending: { label: 'Pending', icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
@@ -103,20 +33,31 @@ const statusConfig: Record<OrderStatus, { label: string; icon: React.ElementType
 const Orders = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const { data: orders = [], isLoading } = useOrders();
 
-  const filteredOrders = mockOrders.filter((order) => {
+  const filteredOrders = orders.filter((order) => {
     const matchesSearch =
-      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.items.some((item) => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      order.order_number.toLowerCase().includes(searchQuery.toLowerCase());
 
+    const status = order.status as OrderStatus;
     const matchesTab =
       activeTab === 'all' ||
-      (activeTab === 'active' && ['pending', 'processing', 'shipped'].includes(order.status)) ||
-      (activeTab === 'completed' && order.status === 'delivered') ||
-      (activeTab === 'cancelled' && order.status === 'cancelled');
+      (activeTab === 'active' && ['pending', 'processing', 'shipped'].includes(status)) ||
+      (activeTab === 'completed' && status === 'delivered') ||
+      (activeTab === 'cancelled' && status === 'cancelled');
 
     return matchesSearch && matchesTab;
   });
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -168,7 +109,11 @@ const Orders = () => {
             ) : (
               <div className="space-y-4">
                 {filteredOrders.map((order) => {
-                  const StatusIcon = statusConfig[order.status].icon;
+                  const status = (order.status as OrderStatus) || 'pending';
+                  const StatusIcon = statusConfig[status]?.icon || Clock;
+                  const statusColor = statusConfig[status]?.color || 'bg-gray-100 text-gray-800';
+                  const statusLabel = statusConfig[status]?.label || order.status;
+
                   return (
                     <Card key={order.id}>
                       <CardContent className="pt-6">
@@ -176,14 +121,14 @@ const Orders = () => {
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                           <div>
                             <div className="flex items-center gap-3">
-                              <h3 className="font-semibold">{order.orderNumber}</h3>
-                              <Badge className={statusConfig[order.status].color}>
+                              <h3 className="font-semibold">{order.order_number}</h3>
+                              <Badge className={statusColor}>
                                 <StatusIcon className="h-3 w-3 mr-1" />
-                                {statusConfig[order.status].label}
+                                {statusLabel}
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
-                              Placed on {new Date(order.date).toLocaleDateString('en-IN', {
+                              Placed on {new Date(order.created_at).toLocaleDateString('en-IN', {
                                 day: 'numeric',
                                 month: 'long',
                                 year: 'numeric',
@@ -191,88 +136,62 @@ const Orders = () => {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold text-lg">₹{order.total}</p>
+                            <p className="font-bold text-lg">₹{Number(order.total_amount)}</p>
                             <p className="text-sm text-muted-foreground">
-                              {order.items.reduce((sum, item) => sum + item.quantity, 0)} items
+                              {order.order_items?.length || 0} items
                             </p>
                           </div>
                         </div>
 
                         {/* Order Items */}
                         <div className="flex gap-3 overflow-x-auto pb-2">
-                          {order.items.map((item) => (
+                          {order.order_items?.map((item) => (
                             <div
                               key={item.id}
                               className="flex items-center gap-3 min-w-fit border rounded-lg p-2"
                             >
                               <div className="h-12 w-12 bg-muted rounded flex-shrink-0">
                                 <img
-                                  src={item.image || '/placeholder.svg'}
-                                  alt={item.name}
+                                  src="/placeholder.svg"
+                                  alt={item.product_name}
                                   className="h-full w-full object-cover rounded"
                                 />
                               </div>
                               <div>
-                                <p className="font-medium text-sm">{item.name}</p>
+                                <p className="font-medium text-sm">{item.product_name}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {item.quantity} {item.unit} × ₹{item.price}
+                                  {item.quantity} × ₹{Number(item.unit_price)}
                                 </p>
                               </div>
                             </div>
                           ))}
                         </div>
 
-                        {/* Delivery Info */}
-                        {order.status === 'shipped' && (
-                          <div className="mt-4 p-3 bg-primary/5 rounded-lg">
-                            <div className="flex items-center gap-2 text-sm">
-                              <Truck className="h-4 w-4 text-primary" />
-                              <span>
-                                Expected delivery by{' '}
-                                <strong>
-                                  {new Date(order.estimatedDelivery!).toLocaleDateString('en-IN', {
-                                    day: 'numeric',
-                                    month: 'long',
-                                  })}
-                                </strong>
-                              </span>
-                            </div>
-                            {order.trackingId && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Tracking ID: {order.trackingId}
-                              </p>
-                            )}
+                        {/* Delivery Address */}
+                        {order.delivery_address && (
+                          <div className="mt-4 flex items-start gap-2 text-sm text-muted-foreground">
+                            <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                            <span>
+                              {order.delivery_address}, {order.delivery_city}, {order.delivery_state}
+                            </span>
                           </div>
                         )}
 
-                        {/* Delivery Address */}
-                        <div className="mt-4 flex items-start gap-2 text-sm text-muted-foreground">
-                          <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                          <span>{order.deliveryAddress}</span>
-                        </div>
-
                         {/* Actions */}
                         <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
-                          <Button variant="outline" size="sm" asChild>
-                            <Link to={`/buyer/orders/${order.id}`}>
-                              View Details
-                              <ChevronRight className="h-4 w-4 ml-1" />
-                            </Link>
+                          <Button variant="outline" size="sm">
+                            View Details
+                            <ChevronRight className="h-4 w-4 ml-1" />
                           </Button>
-                          {order.status === 'delivered' && (
+                          {status === 'delivered' && (
                             <Button variant="outline" size="sm" className="gap-1">
                               <Star className="h-4 w-4" />
                               Rate Order
                             </Button>
                           )}
-                          {order.status === 'delivered' && (
+                          {status === 'delivered' && (
                             <Button variant="outline" size="sm">
                               Reorder
-                            </Button>
-                          )}
-                          {order.status === 'pending' && (
-                            <Button variant="outline" size="sm" className="text-destructive">
-                              Cancel Order
                             </Button>
                           )}
                         </div>

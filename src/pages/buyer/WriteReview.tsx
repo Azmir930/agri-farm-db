@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Star, ChevronLeft, Send } from 'lucide-react';
+import { Star, ChevronLeft, Send, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getProductById } from '@/data/mockProducts';
+import { useProduct } from '@/hooks/useProducts';
+import { useCreateReview } from '@/hooks/useReviews';
 
 const WriteReview = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -17,9 +18,19 @@ const WriteReview = () => {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const product = getProductById(productId || '');
+  const { data: product, isLoading } = useProduct(productId || '');
+  const createReview = useCreateReview();
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (!product) {
     return (
@@ -53,11 +64,12 @@ const WriteReview = () => {
       return;
     }
 
-    setIsSubmitting(true);
-
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await createReview.mutateAsync({
+        productId: productId!,
+        rating,
+        comment: reviewText,
+      });
 
       toast({
         title: 'Review submitted!',
@@ -71,8 +83,6 @@ const WriteReview = () => {
         description: 'Please try again',
         variant: 'destructive',
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -97,16 +107,16 @@ const WriteReview = () => {
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="h-20 w-20 bg-muted rounded-lg flex-shrink-0">
               <img
-                src={product.image || '/placeholder.svg'}
+                src={product.image_url || '/placeholder.svg'}
                 alt={product.name}
                 className="h-full w-full object-cover rounded-lg"
               />
             </div>
             <div>
               <h3 className="font-semibold text-lg">{product.name}</h3>
-              <p className="text-sm text-muted-foreground">by {product.farmerName}</p>
+              <p className="text-sm text-muted-foreground">by {product.farmer_name}</p>
               <p className="text-primary font-medium mt-1">
-                ₹{product.price}/{product.unit}
+                ₹{Number(product.price)}/{product.unit}
               </p>
             </div>
           </CardContent>
@@ -186,17 +196,17 @@ const WriteReview = () => {
                 variant="outline"
                 className="flex-1"
                 onClick={() => navigate(-1)}
-                disabled={isSubmitting}
+                disabled={createReview.isPending}
               >
                 Cancel
               </Button>
               <Button
                 className="flex-1 gap-2"
                 onClick={handleSubmit}
-                disabled={isSubmitting || rating === 0}
+                disabled={createReview.isPending || rating === 0}
               >
                 <Send className="h-4 w-4" />
-                {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                {createReview.isPending ? 'Submitting...' : 'Submit Review'}
               </Button>
             </div>
           </CardContent>

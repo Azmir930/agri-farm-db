@@ -1,56 +1,63 @@
 import React from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { OrdersTable, Order } from '@/components/dashboard/OrdersTable';
+import { OrdersTable } from '@/components/dashboard/OrdersTable';
 import { RecentActivity, Activity } from '@/components/dashboard/RecentActivity';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, Truck, IndianRupee, Star, Plus } from 'lucide-react';
+import { Package, Truck, IndianRupee, Star, Plus, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-// Mock data
-const mockOrders: Order[] = [
-  {
-    id: '1',
-    orderNumber: 'ORD-001',
-    customerName: 'Rajesh Kumar',
-    products: [{ name: 'Organic Tomatoes', quantity: 5 }, { name: 'Fresh Spinach', quantity: 2 }],
-    total: 850,
-    status: 'pending',
-    date: '2024-01-15',
-  },
-  {
-    id: '2',
-    orderNumber: 'ORD-002',
-    customerName: 'Priya Sharma',
-    products: [{ name: 'Basmati Rice', quantity: 10 }],
-    total: 1200,
-    status: 'processing',
-    date: '2024-01-14',
-  },
-  {
-    id: '3',
-    orderNumber: 'ORD-003',
-    customerName: 'Amit Patel',
-    products: [{ name: 'Fresh Mangoes', quantity: 3 }],
-    total: 450,
-    status: 'shipped',
-    date: '2024-01-13',
-  },
-];
-
-const mockActivities: Activity[] = [
-  { id: '1', type: 'order', message: 'New order received from Rajesh Kumar', time: '2 minutes ago' },
-  { id: '2', type: 'review', message: 'Priya left a 5-star review on Organic Tomatoes', time: '1 hour ago' },
-  { id: '3', type: 'product', message: 'Low stock alert: Fresh Spinach (5 kg remaining)', time: '3 hours ago' },
-  { id: '4', type: 'payment', message: 'Payment of ₹1,200 received for ORD-002', time: '5 hours ago' },
-];
+import { useFarmerProducts } from '@/hooks/useProducts';
+import { useFarmerOrders } from '@/hooks/useOrders';
+import { useFarmerReviews } from '@/hooks/useReviews';
+import { useAuth } from '@/contexts/AuthContext';
 
 const FarmerDashboard = () => {
+  const { user } = useAuth();
+  const { data: products = [], isLoading: productsLoading } = useFarmerProducts(user?.id);
+  const { data: orders = [], isLoading: ordersLoading } = useFarmerOrders();
+  const { data: reviews = [] } = useFarmerReviews();
+
+  const pendingOrders = orders.filter(o => o.status === 'pending').length;
+  const totalRevenue = orders
+    .filter(o => o.status === 'delivered')
+    .reduce((sum, o) => sum + Number(o.total_amount), 0);
+  const avgRating = reviews.length > 0
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+    : 0;
+
+  const recentActivities: Activity[] = orders.slice(0, 4).map(order => ({
+    id: order.id,
+    type: 'order' as const,
+    message: `Order ${order.order_number} - ${order.status}`,
+    time: new Date(order.created_at).toLocaleDateString(),
+  }));
+
+  const tableOrders = orders.slice(0, 5).map(o => ({
+    id: o.id,
+    orderNumber: o.order_number,
+    customerName: 'Customer',
+    products: o.order_items.map(item => ({ name: item.product_name, quantity: item.quantity })),
+    total: Number(o.total_amount),
+    status: o.status as 'pending' | 'processing' | 'shipped' | 'delivered',
+    date: new Date(o.created_at).toLocaleDateString(),
+  }));
+
+  const isLoading = productsLoading || ordersLoading;
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Farmer Dashboard</h1>
@@ -64,37 +71,14 @@ const FarmerDashboard = () => {
           </Button>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Total Products"
-            value="24"
-            icon={Package}
-            trend={{ value: 12, isPositive: true }}
-          />
-          <StatCard
-            title="Pending Orders"
-            value="8"
-            icon={Truck}
-            trend={{ value: 5, isPositive: true }}
-          />
-          <StatCard
-            title="Total Revenue"
-            value="₹45,280"
-            icon={IndianRupee}
-            trend={{ value: 18, isPositive: true }}
-          />
-          <StatCard
-            title="Avg. Rating"
-            value="4.8"
-            icon={Star}
-            trend={{ value: 0.2, isPositive: true }}
-          />
+          <StatCard title="Total Products" value={products.length} icon={Package} />
+          <StatCard title="Pending Orders" value={pendingOrders} icon={Truck} />
+          <StatCard title="Total Revenue" value={`₹${totalRevenue.toLocaleString()}`} icon={IndianRupee} />
+          <StatCard title="Avg. Rating" value={avgRating.toFixed(1)} icon={Star} />
         </div>
 
-        {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Orders Table */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -104,56 +88,40 @@ const FarmerDashboard = () => {
                 </Button>
               </CardHeader>
               <CardContent>
-                <OrdersTable orders={mockOrders.slice(0, 5)} />
+                <OrdersTable orders={tableOrders} />
               </CardContent>
             </Card>
           </div>
-
-          {/* Recent Activity */}
-          <RecentActivity activities={mockActivities} />
+          <RecentActivity activities={recentActivities} />
         </div>
 
-        {/* Inventory Alerts */}
         <Card>
           <CardHeader>
             <CardTitle>Inventory Alerts</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {[
-                { name: 'Fresh Spinach', stock: 5, unit: 'kg', status: 'low' },
-                { name: 'Organic Carrots', stock: 12, unit: 'kg', status: 'medium' },
-                { name: 'Red Onions', stock: 3, unit: 'kg', status: 'critical' },
-              ].map((item) => (
+              {products.filter(p => p.stock < 20).slice(0, 3).map((item) => (
                 <div
-                  key={item.name}
+                  key={item.id}
                   className={`rounded-lg border p-4 ${
-                    item.status === 'critical'
-                      ? 'border-destructive/50 bg-destructive/5'
-                      : item.status === 'low'
-                      ? 'border-warning/50 bg-warning/5'
-                      : 'border-border'
+                    item.stock < 5 ? 'border-destructive/50 bg-destructive/5' : 'border-border'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{item.name}</span>
-                    <span
-                      className={`text-sm font-medium ${
-                        item.status === 'critical'
-                          ? 'text-destructive'
-                          : item.status === 'low'
-                          ? 'text-warning'
-                          : 'text-muted-foreground'
-                      }`}
-                    >
+                    <span className={`text-sm font-medium ${item.stock < 5 ? 'text-destructive' : 'text-muted-foreground'}`}>
                       {item.stock} {item.unit}
                     </span>
                   </div>
                   <Button variant="link" size="sm" className="mt-2 h-auto p-0" asChild>
-                    <Link to="/farmer/inventory">Update Stock →</Link>
+                    <Link to="/farmer/products">Update Stock →</Link>
                   </Button>
                 </div>
               ))}
+              {products.filter(p => p.stock < 20).length === 0 && (
+                <p className="text-muted-foreground">No low stock items</p>
+              )}
             </div>
           </CardContent>
         </Card>

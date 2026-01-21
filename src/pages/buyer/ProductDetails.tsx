@@ -20,49 +20,39 @@ import {
   ChevronLeft,
   Store,
   MapPin,
+  Loader2,
 } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
-import { getProductById, mockProducts } from '@/data/mockProducts';
-
-const mockReviews = [
-  {
-    id: '1',
-    userName: 'Priya Sharma',
-    rating: 5,
-    date: '2024-01-10',
-    comment: 'Excellent quality! Fresh and organic as promised. Will buy again.',
-    helpful: 12,
-  },
-  {
-    id: '2',
-    userName: 'Amit Patel',
-    rating: 4,
-    date: '2024-01-08',
-    comment: 'Good quality produce. Delivery was on time. Slightly expensive.',
-    helpful: 8,
-  },
-  {
-    id: '3',
-    userName: 'Sunita Devi',
-    rating: 5,
-    date: '2024-01-05',
-    comment: 'Love supporting local farmers. Product quality is consistently great.',
-    helpful: 15,
-  },
-];
+import { useProduct, useProducts } from '@/hooks/useProducts';
+import { useProductReviews } from '@/hooks/useReviews';
+import { useWishlist } from '@/hooks/useWishlist';
 
 const ProductDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const { addItem } = useCart();
   const { toast } = useToast();
+  
+  const { data: productData, isLoading } = useProduct(id || '');
+  const { data: allProducts = [] } = useProducts();
+  const { data: reviews = [] } = useProductReviews(id || '');
+  const { items: wishlistItems, addToWishlist, isInWishlist } = useWishlist();
 
-  const product = getProductById(id || '');
+  const isWishlisted = isInWishlist(id || '');
 
-  if (!product) {
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!productData) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">
@@ -75,9 +65,35 @@ const ProductDetails = () => {
     );
   }
 
-  const relatedProducts = mockProducts
-    .filter((p) => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
+  const avgRating = reviews.length > 0 
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
+    : 0;
+
+  const product = {
+    id: productData.id,
+    name: productData.name,
+    description: productData.description || '',
+    price: Number(productData.price),
+    unit: productData.unit,
+    category: productData.categories?.name || 'Other',
+    stock: productData.stock,
+    rating: avgRating,
+    reviewCount: reviews.length,
+    farmerId: productData.farmer_id,
+    farmerName: productData.farmer_name || 'Unknown Farmer',
+    image: productData.image_url || undefined,
+  };
+
+  const relatedProducts = allProducts
+    .filter((p) => p.categories?.name === productData.categories?.name && p.id !== product.id)
+    .slice(0, 4)
+    .map(p => ({
+      id: p.id,
+      name: p.name,
+      price: Number(p.price),
+      unit: p.unit,
+      image: p.image_url,
+    }));
 
   const handleAddToCart = () => {
     addItem({
@@ -110,23 +126,35 @@ const ProductDetails = () => {
     navigate('/buyer/checkout');
   };
 
-  const toggleWishlist = () => {
-    setIsWishlisted(!isWishlisted);
-    toast({
-      title: isWishlisted ? 'Removed from wishlist' : 'Added to wishlist',
-      description: isWishlisted
-        ? `${product.name} removed from wishlist`
-        : `${product.name} added to wishlist`,
-    });
+  const toggleWishlist = async () => {
+    if (!isWishlisted) {
+      try {
+        await addToWishlist(product.id);
+        toast({
+          title: 'Added to wishlist',
+          description: `${product.name} added to wishlist`,
+        });
+      } catch {
+        toast({
+          title: 'Error',
+          description: 'Failed to add to wishlist',
+          variant: 'destructive',
+        });
+      }
+    } else {
+      toast({
+        title: 'Already in wishlist',
+        description: `${product.name} is already in your wishlist`,
+      });
+    }
   };
 
-  const ratingDistribution = [
-    { stars: 5, count: 85, percentage: 68 },
-    { stars: 4, count: 25, percentage: 20 },
-    { stars: 3, count: 10, percentage: 8 },
-    { stars: 2, count: 3, percentage: 2 },
-    { stars: 1, count: 1, percentage: 2 },
-  ];
+  // Calculate rating distribution from reviews
+  const ratingDistribution = [5, 4, 3, 2, 1].map(stars => {
+    const count = reviews.filter(r => r.rating === stars).length;
+    const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+    return { stars, count, percentage };
+  });
 
   return (
     <DashboardLayout>
@@ -168,7 +196,7 @@ const ProductDetails = () => {
               <div className="flex items-center gap-4 mt-2">
                 <div className="flex items-center gap-1">
                   <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                  <span className="font-medium">{product.rating}</span>
+                  <span className="font-medium">{product.rating.toFixed(1)}</span>
                   <span className="text-muted-foreground">({product.reviewCount} reviews)</span>
                 </div>
                 <Badge variant={product.stock > 10 ? 'default' : 'destructive'}>
@@ -315,7 +343,7 @@ const ProductDetails = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-4">
-                    <div className="text-4xl font-bold">{product.rating}</div>
+                    <div className="text-4xl font-bold">{product.rating.toFixed(1)}</div>
                     <div>
                       <div className="flex">
                         {[1, 2, 3, 4, 5].map((star) => (
@@ -350,43 +378,48 @@ const ProductDetails = () => {
 
               {/* Reviews List */}
               <div className="lg:col-span-2 space-y-4">
-                {mockReviews.map((review) => (
-                  <Card key={review.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarFallback>{review.userName.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{review.userName}</p>
-                            <div className="flex items-center gap-2">
-                              <div className="flex">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <Star
-                                    key={star}
-                                    className={`h-3 w-3 ${
-                                      star <= review.rating
-                                        ? 'fill-yellow-400 text-yellow-400'
-                                        : 'text-muted'
-                                    }`}
-                                  />
-                                ))}
+                {reviews.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-8 text-center text-muted-foreground">
+                      No reviews yet. Be the first to review this product!
+                    </CardContent>
+                  </Card>
+                ) : (
+                  reviews.map((review) => (
+                    <Card key={review.id}>
+                      <CardContent className="pt-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarFallback>{review.user_name?.charAt(0) || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{review.user_name || 'Anonymous'}</p>
+                              <div className="flex items-center gap-2">
+                                <div className="flex">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                      key={star}
+                                      className={`h-3 w-3 ${
+                                        star <= review.rating
+                                          ? 'fill-yellow-400 text-yellow-400'
+                                          : 'text-muted'
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(review.created_at).toLocaleDateString()}
+                                </span>
                               </div>
-                              <span className="text-xs text-muted-foreground">{review.date}</span>
                             </div>
                           </div>
                         </div>
-                      </div>
-                      <p className="mt-3 text-muted-foreground">{review.comment}</p>
-                      <div className="mt-3 flex items-center gap-4">
-                        <Button variant="ghost" size="sm">
-                          Helpful ({review.helpful})
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        <p className="mt-3 text-muted-foreground">{review.comment}</p>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </div>
           </TabsContent>

@@ -6,84 +6,32 @@ import { RecentActivity, Activity } from '@/components/dashboard/RecentActivity'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Package, Heart, Truck } from 'lucide-react';
+import { ShoppingCart, Package, Heart, Truck, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
-
-// Mock data
-const mockProducts: Product[] = [
-  {
-    id: '1',
-    name: 'Organic Tomatoes',
-    description: 'Fresh organic tomatoes grown without pesticides',
-    price: 60,
-    unit: 'kg',
-    category: 'Vegetables',
-    stock: 50,
-    rating: 4.8,
-    reviewCount: 124,
-    farmerId: 'f1',
-    farmerName: 'Green Acres Farm',
-  },
-  {
-    id: '2',
-    name: 'Fresh Spinach',
-    description: 'Nutrient-rich spinach leaves, harvested daily',
-    price: 40,
-    unit: 'bunch',
-    category: 'Leafy Greens',
-    stock: 30,
-    rating: 4.6,
-    reviewCount: 89,
-    farmerId: 'f2',
-    farmerName: 'Valley Organics',
-  },
-  {
-    id: '3',
-    name: 'Basmati Rice',
-    description: 'Premium aged basmati rice from Punjab',
-    price: 120,
-    unit: 'kg',
-    category: 'Grains',
-    stock: 100,
-    rating: 4.9,
-    reviewCount: 256,
-    farmerId: 'f3',
-    farmerName: 'Golden Harvest',
-  },
-  {
-    id: '4',
-    name: 'Fresh Mangoes',
-    description: 'Alphonso mangoes, naturally ripened',
-    price: 150,
-    unit: 'dozen',
-    category: 'Fruits',
-    stock: 25,
-    rating: 4.7,
-    reviewCount: 178,
-    farmerId: 'f1',
-    farmerName: 'Green Acres Farm',
-  },
-];
-
-const mockActivities: Activity[] = [
-  { id: '1', type: 'order', message: 'Your order #ORD-045 has been shipped', time: '30 minutes ago' },
-  { id: '2', type: 'product', message: 'Fresh Mangoes back in stock!', time: '2 hours ago' },
-  { id: '3', type: 'review', message: 'Your review on Organic Tomatoes was published', time: '1 day ago' },
-];
-
-const categories = ['All', 'Vegetables', 'Fruits', 'Grains', 'Leafy Greens', 'Dairy'];
+import { useProducts, useCategories } from '@/hooks/useProducts';
+import { useWishlist } from '@/hooks/useWishlist';
+import { useOrders } from '@/hooks/useOrders';
 
 const BuyerDashboard = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const { addItem, itemCount, total } = useCart();
   const { toast } = useToast();
+  
+  const { data: products = [], isLoading: productsLoading } = useProducts();
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const { items: wishlistItems } = useWishlist();
+  const { data: orders = [] } = useOrders();
+
+  const allCategories = ['All', ...categories.map(c => c.name)];
 
   const filteredProducts =
     selectedCategory === 'All'
-      ? mockProducts
-      : mockProducts.filter((p) => p.category === selectedCategory);
+      ? products.slice(0, 8)
+      : products.filter((p) => p.categories?.name === selectedCategory).slice(0, 8);
+
+  const pendingOrders = orders.filter(o => ['pending', 'processing', 'shipped'].includes(o.status)).length;
 
   const handleAddToCart = (product: Product) => {
     addItem({
@@ -109,6 +57,29 @@ const BuyerDashboard = () => {
     });
   };
 
+  // Transform database products to ProductCard format
+  const transformedProducts: Product[] = filteredProducts.map(p => ({
+    id: p.id,
+    name: p.name,
+    description: p.description || '',
+    price: Number(p.price),
+    unit: p.unit,
+    category: p.categories?.name || 'Other',
+    stock: p.stock,
+    rating: 0,
+    reviewCount: 0,
+    farmerId: p.farmer_id,
+    farmerName: p.farmer_name || 'Unknown Farmer',
+    image: p.image_url || undefined,
+  }));
+
+  const recentActivities: Activity[] = orders.slice(0, 3).map(order => ({
+    id: order.id,
+    type: 'order' as const,
+    message: `Order ${order.order_number} is ${order.status}`,
+    time: new Date(order.created_at).toLocaleDateString(),
+  }));
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -129,9 +100,9 @@ const BuyerDashboard = () => {
         {/* Stats Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard title="Items in Cart" value={itemCount} icon={ShoppingCart} />
-          <StatCard title="Wishlist Items" value="5" icon={Heart} />
-          <StatCard title="Total Orders" value="12" icon={Package} />
-          <StatCard title="Pending Delivery" value="2" icon={Truck} />
+          <StatCard title="Wishlist Items" value={wishlistItems.length} icon={Heart} />
+          <StatCard title="Total Orders" value={orders.length} icon={Package} />
+          <StatCard title="Pending Delivery" value={pendingOrders} icon={Truck} />
         </div>
 
         {/* Main Content */}
@@ -149,29 +120,41 @@ const BuyerDashboard = () => {
               </CardHeader>
               <CardContent>
                 {/* Category Tabs */}
-                <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="mb-6">
-                  <TabsList className="flex-wrap h-auto gap-2">
-                    {categories.map((cat) => (
-                      <TabsTrigger key={cat} value={cat} className="px-4">
-                        {cat}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
+                {categoriesLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : (
+                  <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="mb-6">
+                    <TabsList className="flex-wrap h-auto gap-2">
+                      {allCategories.map((cat) => (
+                        <TabsTrigger key={cat} value={cat} className="px-4">
+                          {cat}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
+                )}
 
                 {/* Products Grid */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {filteredProducts.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      onAddToCart={handleAddToCart}
-                      onAddToWishlist={handleAddToWishlist}
-                    />
-                  ))}
-                </div>
+                {productsLoading ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {transformedProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        onAddToCart={handleAddToCart}
+                        onAddToWishlist={handleAddToWishlist}
+                      />
+                    ))}
+                  </div>
+                )}
 
-                {filteredProducts.length === 0 && (
+                {!productsLoading && transformedProducts.length === 0 && (
                   <div className="py-12 text-center text-muted-foreground">
                     No products found in this category
                   </div>
@@ -182,7 +165,7 @@ const BuyerDashboard = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <RecentActivity activities={mockActivities} title="Your Activity" />
+            <RecentActivity activities={recentActivities} title="Your Activity" />
 
             {/* Quick Links */}
             <Card>
